@@ -1,0 +1,162 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html lang="en"> <head>
+<title>Appointments</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" type="text/css"
+     href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css"
+/>
+
+<link rel="stylesheet" type="text/css"
+ href="/static/js/node_modules/bootstrap-daterangepicker/daterangepicker.css"
+/>
+
+<link rel="stylesheet" type="text/css"
+    href="/static/css/busy.css"
+/>
+
+<!-- jquery from a content distribution network; probably cached -->
+<script type="text/javascript"
+     src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
+</script>
+
+
+<!-- The rest of our javascript dependencies are bundled and -->
+<!-- 'minified' by 'browserify'  -->
+<script type="text/javascript" 
+   src="/static/js/busy.min.js">
+</script>
+</head>
+<!--Three steps to display:
+-set date range
+-select calendar
+-(for proposer) send email
+*Each step will be displayed corresponding to whether proposer or participant are using the app and are at which step-->
+<body>
+<div class="container">
+{% if session.responded is defined %}
+<button type="button" onclick="location.href = '/setMeeting';">Check Responses</button>
+{% endif %}
+{% if session.calendars is not defined %}
+<h2>Date range</h2>
+<span>(First choose a range of dates to check for busy times FORMAT: MM/DD/YYYY - MM/DD/YYYY)</span>
+  <form action="/setrange" method="post">
+  <input type="text" name="daterange" size="12"
+    {% if session.daterange is defined %}
+         value="{{session.daterange}}"
+    {% endif %}
+     class="pull-down"
+     style="background: #FFFFCC; cursor: pointer; padding: 5px 10px;
+     border: 1px solid #ccc; width: 12em" >
+  <script type="text/javascript">  
+  $(function() {
+  $('input[name="daterange"]').daterangepicker(
+    {    ranges: {
+           'Today': [moment(), moment()],
+           'Tomorrow':[moment().add(1, 'days'),
+                       moment().add(1, 'days')], 
+           'This week':[moment(), moment().endOf('week')],
+           'Next week':[moment().add(7, 'days').startOf('week'),
+                        moment().add(7, 'days').endOf('week')],
+           'This month':[moment(), moment().endOf('month')],
+           'Within two weeks':[moment(),moment().add(15, 'days')]
+        }}
+       );
+    });
+</script>
+<br><!--Choose button--Send range of dates to /setrange and show available calendars--><input type="submit" onClick="chosen()" class="btn btn-default" value="Choose"></input>
+</form>
+{% endif %}
+
+<!--Show the calendar list (if we have it).  This will need to be turned into a form from which calendars can be picked. Up to three entries are shown in each row (but the order is across then down; I would prefer down then across). -->
+{% if session.propCals == False %}
+{% if session.calendars is defined  %}
+  <div class="row">
+  <span>Select the calendars you would like to include for the proposal</span>
+  {% for cal in session.calendars %}
+          <div class="col-md-4"><input type=checkbox name="calendar" id="{{ cal.id }}"><!--list of calendars from google acct-->
+	   {{ cal.summary }}
+          </div>
+         {% if loop.index is divisibleby 3 %}
+          </div> <div class="row">
+         {% endif %}
+  {% endfor %}
+<!--Displays appropiate button for sending calendar selection based on user of app (proposer or participant)-->
+{% if session.response is not defined %}
+<button type="button" onclick="chosen()">Select Calendars</button>
+{% else %}
+<button type="button" onclick="chosenEmail()">Send Availability from Calendars</button>
+{% endif %}
+  </div>
+{% endif %}
+{% endif %}
+<!--If app user is proposer show input field to send email to link to the app proposal-->
+{% if session.propCals == True %}
+<form id="sendForm" method="POST">
+<b>Add the email of who you want to send your proposal to:</b><br>
+<input type="text" id="Email">
+<input type="button" id="sendButton" value="Send Proposal">
+</form>
+<span class="sent"></span>
+{% endif %}
+<br>
+</div>  <!-- container (for bootstrap) -->
+
+<script type="text/javascript">
+
+    $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+
+    /*chosen() : This function is called once a user Chooses a range of dates and clicks the 'Choose' button. It gathers which calendars are checked, sends the list via JSON request to '/choose' and receives a list of start and end times for busy sections in each calendar and displays the result.*/
+    function chosen() {      
+        
+	//select available calendars via checkboxes    
+        var checkBoxes = document.getElementsByName('calendar');
+        var chosenCal = [];
+        for (var i = 0; i < checkBoxes.length; i++) {
+            if (checkBoxes[i].checked) {
+            chosenCal.push(checkBoxes[i].id); }
+        }
+        
+	//convert list to JSON
+        chosenCal = JSON.stringify({ 'cals': chosenCal });      
+       
+	// AJAX request
+        $.getJSON($SCRIPT_ROOT + '/choose',
+            { selected: chosenCal },
+		/*Mediocre method function to retrieve start/end times 			from our returned request JSON object and send to doc*/
+                function(times) {
+			location.reload(true);
+	}); // end getJSON call
+
+    }
+	//similar to chosen() function but reroutes to /emailRouted instead
+	function chosenEmail() {      
+        
+	//select available calendars via checkboxes    
+        var checkBoxes = document.getElementsByName('calendar');
+        var chosenCal = [];
+        for (var i = 0; i < checkBoxes.length; i++) {
+            if (checkBoxes[i].checked) {
+            chosenCal.push(checkBoxes[i].id); }
+        }
+        
+	//convert list to JSON
+        chosenCal = JSON.stringify({ 'cals': chosenCal });      
+       
+	// AJAX request
+        $.getJSON($SCRIPT_ROOT + '/emailRouted',
+            { selected: chosenCal },
+		/*Mediocre method function to retrieve start/end times 			from our returned request JSON object and send to doc*/
+                function(times) {
+			alert("Availability Sent! Go back to the home page to set meeting as proposer");
+	}); // end getJSON call
+	}
+
+	//Prompts the inbedded mail transfer protocol to prefill a message 		//and fields in an email to be sent by the proposer
+	$('#sendButton').click(function() { alert("Generating Mail Form");
+		//$('#sendForm').attr('action',
+					document.location.href = "mailto:taj4283@hotmail.com?subject=Meeting Proposal&body=Someone has proposed a meeting using the availability from their schedule. Click the link to respond with your own availability so they can find a mutually open time: http://ix.cs.uoregon.edu:5808/emailRouted Click here to Respond";
+		//$('#sendForm').submit();
+	});               
+</script>
+</body></html>

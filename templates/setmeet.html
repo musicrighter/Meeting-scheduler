@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html lang="en"> <head>
+<title>Set Meeting</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="stylesheet" type="text/css"
+     href="//cdn.jsdelivr.net/bootstrap/latest/css/bootstrap.css"
+/>
+
+<link rel="stylesheet" type="text/css"
+ href="/static/js/node_modules/bootstrap-daterangepicker/daterangepicker.css"
+/>
+
+<link rel="stylesheet" type="text/css"
+    href="/static/css/busy.css"
+/>
+
+<!-- jquery from a content distribution network; probably cached -->
+<script type="text/javascript"
+     src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
+</script>
+
+
+<!-- The rest of our javascript dependencies are bundled and -->
+<!-- 'minified' by 'browserify'  -->
+<script type="text/javascript" 
+   src="/static/js/busy.min.js">
+</script>
+</head>
+
+<!--Interface for proposer to select one time interval from all the possible times. It also allows the proposer to delete the proposal he originally-->
+<body>
+{% if session.propDeleted is not defined %}
+<h1>Results of Meeting Proposal:</h1>
+<h3><u>These are all of the times where yourself and your meeting participants have openings in their schedules. Select one to set a meeting for that time:</u></h3>
+<!--Display selection of open times-->
+{% if session.possibles is defined %}
+   {% for time in session.possibles %}
+      <div class="col-md-4"><input type=checkbox name="pTimes"><!--list of final possible times-->
+	   {{ time }}
+          </div>
+   {% endfor %}
+{% endif %}
+
+<!--Buttons to set meeting ***NOT IMPLEMENTED*** or delete proposal ***IMPLEMENTED***-->
+<br>
+<button type="button">Set Meeting</button>
+<br><br>
+<b>Or you can delete the original proposal and send a new one:</b>
+<button type="button" onclick="location.href = '/delProposal';" >Delete Proposal</button>
+
+{% else %}
+<b>Proposal deleted!</b>
+{% endif %}
+<br><br>
+</body></html>
